@@ -1,0 +1,10 @@
+node_modules
+dist
+.vite
+client/node_modules
+client/dist
+server/node_modules
+server/.env
+.env
+server/.env
+client/.env
