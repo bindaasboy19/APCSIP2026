@@ -31,6 +31,13 @@ app.use(
 app.use(express.json({ limit: '1mb' }))
 app.use(morgan(env.nodeEnv === 'development' ? 'dev' : 'combined'))
 
+app.get('/', (_req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Digital Identity Fraud Intelligence & Risk Analyzer API is online.',
+  })
+})
+
 app.get('/api/health', (_req, res) => {
   res.status(200).json({
     success: true,
