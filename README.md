@@ -226,3 +226,31 @@ npm run build:client
 - Passwords are hashed with bcrypt.
 - Helmet is enabled for HTTP header hardening.
 - MongoDB is optional and only stores non-sensitive mock profile data.
+
+## 7. Deployment Instructions
+
+### Backend (Render.com)
+
+1. Create a new **Web Service** on Render connected to your repository.
+2. Configure the following service settings:
+   - **Root Directory**: `server`
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+3. Configure the following environment variables under **Environment**:
+   - `NODE_ENV`: `production`
+   - `PORT`: (Render will set this automatically)
+   - `JWT_SECRET`: A secure, random string used for signing JWTs
+   - `CLIENT_ORIGIN`: Comma-separated list of allowed frontend URLs (e.g. `https://your-app.vercel.app`)
+   - `MONGODB_URI`: (Optional) Your production MongoDB connection string (falls back to safe in-memory persistence if left blank)
+
+### Frontend (Vercel.com)
+
+1. Create a new project on Vercel connected to your repository.
+2. Select the **Root Directory** as `client`.
+3. Vercel will auto-detect **Vite** as the framework:
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+4. Add the following Environment Variable:
+   - `VITE_API_BASE_URL`: The full URL to your backend Web Service on Render (e.g., `https://your-service.onrender.com/api`)
+5. Click **Deploy**. The `vercel.json` rewrite configuration handles all client-side React Router redirects automatically.
+
