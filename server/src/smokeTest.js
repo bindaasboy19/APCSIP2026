@@ -1,7 +1,7 @@
 import { login, verifyOtp } from './controllers/authController.js'
 import { connectDatabase } from './config/db.js'
 import { submitIdentity } from './controllers/identityController.js'
-import { getMuleRisk, getRecommendations, getRiskScore } from './controllers/insightController.js'
+import { getInsights, getPatterns, getRecommendations, getRisk } from './controllers/insightController.js'
 import { getThreats } from './controllers/threatController.js'
 import { authenticate } from './middleware/authMiddleware.js'
 
@@ -77,19 +77,20 @@ async function runSmokeTest() {
     body: {
       numberOfBankAccounts: 4,
       simCount: 2,
-      upiApps: 3,
       has2FA: false,
       hasInactiveAccounts: true,
-      accountAgeDays: 365,
-      avgTransactionsPerDay: 2,
     },
   })
 
-  const riskResult = await invoke(getRiskScore, {
+  const riskResult = await invoke(getRisk, {
     user: authResult.req.user,
   })
 
-  const muleRiskResult = await invoke(getMuleRisk, {
+  const patternsResult = await invoke(getPatterns, {
+    user: authResult.req.user,
+  })
+
+  const insightsResult = await invoke(getInsights, {
     user: authResult.req.user,
   })
 
@@ -104,12 +105,16 @@ async function runSmokeTest() {
     verifyStatus: verifyResult.status,
     submitIdentityStatus: identityResult.status,
     riskStatus: riskResult.status,
-    muleRiskStatus: muleRiskResult.status,
+    patternsStatus: patternsResult.status,
+    insightsStatus: insightsResult.status,
     recommendationsStatus: recommendationResult.status,
     threatStatus: threatResult.status,
-    riskScore: riskResult.body.data.assessment.risk.score,
-    riskLevel: riskResult.body.data.assessment.risk.level,
-    muleRiskLevel: muleRiskResult.body.data.muleRisk.level,
+    riskScore: riskResult.body.data.risk.score,
+    riskLevel: riskResult.body.data.risk.level,
+    muleRiskLevel: riskResult.body.data.detections.muleRisk,
+    simSwapRiskLevel: riskResult.body.data.detections.simSwapRisk,
+    detectedPatterns: patternsResult.body.data.patterns.map((pattern) => pattern.title),
+    topInsight: insightsResult.body.data.insights[0]?.title,
     recommendationCount: recommendationResult.body.data.recommendations.length,
     topScenario: threatResult.body.data.scenarios[0].title,
     submittedAssessmentId: identityResult.body.data.assessment.id,

@@ -1,19 +1,21 @@
-export function buildAlerts({ profile, risk, muleRisk }) {
+export function buildAlerts({ profile, risk, detections }) {
   const alerts = []
 
   if (!profile.has2FA) {
     alerts.push({
       severity: 'critical',
       title: 'Primary recovery path lacks 2FA',
-      description: 'If the linked email or mobile recovery channel is compromised, account takeover becomes significantly easier.',
+      description:
+        'If the linked email or mobile recovery channel is compromised, account takeover becomes much easier to execute.',
     })
   }
 
   if (profile.simCount > 1) {
     alerts.push({
-      severity: 'high',
+      severity: detections.simSwapRisk === 'High' ? 'critical' : 'high',
       title: 'Multiple SIMs increase SIM swap exposure',
-      description: 'More than one active SIM broadens the number-porting and OTP interception attack surface.',
+      description:
+        'More than one active SIM broadens the number-porting and OTP interception attack surface.',
     })
   }
 
@@ -21,31 +23,26 @@ export function buildAlerts({ profile, risk, muleRisk }) {
     alerts.push({
       severity: 'high',
       title: 'Inactive financial links remain exploitable',
-      description: 'Dormant accounts are often ignored during monitoring, making them attractive for fraudulent reuse.',
+      description:
+        'Dormant accounts are often ignored during monitoring, making them attractive for fraudulent reuse.',
     })
   }
 
-  if (profile.numberOfBankAccounts >= 5) {
+  if (profile.numberOfBankAccounts >= 4) {
     alerts.push({
-      severity: 'medium',
+      severity: detections.muleRisk === 'High' ? 'high' : 'medium',
       title: 'Large banking footprint expands blast radius',
-      description: 'More linked bank accounts create more recovery paths, transaction endpoints, and fraud escalation options.',
+      description:
+        'More linked bank accounts create more recovery paths, transaction endpoints, and fraud escalation options.',
     })
   }
 
-  if (profile.upiApps >= 3) {
-    alerts.push({
-      severity: 'medium',
-      title: 'UPI sprawl can dilute security hygiene',
-      description: 'Unused or rarely used payment apps increase the chance of stale sessions and forgotten access controls.',
-    })
-  }
-
-  if (muleRisk.level === 'High') {
+  if (detections.muleRisk === 'High') {
     alerts.push({
       severity: 'critical',
       title: 'Mule-account misuse indicators are elevated',
-      description: 'The current simulated footprint combines account sprawl, inactivity, and weak controls in a way often associated with mule-account risk.',
+      description:
+        'The current simulated footprint combines account sprawl, inactivity, and weak controls in a way often associated with mule-account risk.',
     })
   }
 
@@ -61,7 +58,8 @@ export function buildAlerts({ profile, risk, muleRisk }) {
     alerts.unshift({
       severity: 'critical',
       title: 'Composite exposure is above acceptable threshold',
-      description: 'The combined identity footprint presents a high-likelihood path for account takeover or fraud misuse.',
+      description:
+        'The combined identity footprint presents a high-likelihood path for account takeover or fraud misuse.',
     })
   }
 

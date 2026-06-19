@@ -9,6 +9,15 @@ const breakdownSchema = new mongoose.Schema(
   { _id: false },
 )
 
+const detectionSchema = new mongoose.Schema(
+  {
+    identityMisuseRisk: String,
+    muleRisk: String,
+    simSwapRisk: String,
+  },
+  { _id: false },
+)
+
 const chartPointSchema = new mongoose.Schema(
   {
     name: String,
@@ -17,9 +26,44 @@ const chartPointSchema = new mongoose.Schema(
   { _id: false },
 )
 
+const patternSchema = new mongoose.Schema(
+  {
+    id: String,
+    title: String,
+    severity: String,
+    explanation: String,
+  },
+  { _id: false },
+)
+
+const insightSchema = new mongoose.Schema(
+  {
+    title: String,
+    description: String,
+  },
+  { _id: false },
+)
+
 const alertSchema = new mongoose.Schema(
   {
     severity: String,
+    title: String,
+    description: String,
+  },
+  { _id: false },
+)
+
+const recommendationSchema = new mongoose.Schema(
+  {
+    priority: String,
+    title: String,
+    description: String,
+  },
+  { _id: false },
+)
+
+const fraudFlowStepSchema = new mongoose.Schema(
+  {
     title: String,
     description: String,
   },
@@ -42,11 +86,8 @@ const assessmentSchema = new mongoose.Schema(
     profile: {
       numberOfBankAccounts: Number,
       simCount: Number,
-      upiApps: Number,
       has2FA: Boolean,
       hasInactiveAccounts: Boolean,
-      accountAgeDays: Number,
-      avgTransactionsPerDay: Number,
     },
     risk: {
       score: Number,
@@ -55,45 +96,15 @@ const assessmentSchema = new mongoose.Schema(
       formula: String,
       breakdown: [breakdownSchema],
     },
-    muleRisk: {
-      score: Number,
-      level: String,
-      drivers: [String],
-      rationale: String,
-      probabilityPercentage: Number,
-    },
-    deviceRisk: {
-      score: Number,
-      flags: [String],
-    },
-    fraudCheck: {
-      phoneFlag: Boolean,
-      emailFlag: Boolean,
-      upiFlag: Boolean,
-    },
-    transactionPattern: {
-      patternDetected: Boolean,
-      patternType: String,
-      severity: String,
-    },
-    healthScore: Number,
-    timeline90Days: [
-      {
-        day: Number,
-        riskScore: Number,
-        status: String,
-      }
-    ],
+    detections: detectionSchema,
+    patterns: [patternSchema],
+    insights: [insightSchema],
+    recommendations: [recommendationSchema],
     alerts: [alertSchema],
+    fraudFlow: [fraudFlowStepSchema],
     charts: {
-      breakdown: [breakdownSchema],
-      surfaceBreakdown: [chartPointSchema],
-      muleSignals: [chartPointSchema],
-    },
-    telemetry: {
-      digitalSurfaceIndex: Number,
-      recoveryChannelStrength: String,
-      inactiveExposureWindow: String,
+      breakdown: [chartPointSchema],
+      signalSummary: [chartPointSchema],
     },
   },
   {

@@ -1,226 +1,160 @@
-import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
-import AlertPanel from '../components/AlertPanel.jsx'
-import MetricCard from '../components/MetricCard.jsx'
-import RecommendationList from '../components/RecommendationList.jsx'
-import RiskBreakdownChart from '../components/RiskBreakdownChart.jsx'
-import RiskTimelineChart from '../components/RiskTimelineChart.jsx'
+import InsightBox from '../components/InsightBox.jsx'
+import PatternList from '../components/PatternList.jsx'
+import RiskCard from '../components/RiskCard.jsx'
+import FraudFlowVisualizer from '../components/FraudFlowVisualizer.jsx'
 import IdentityRiskReport from './IdentityRiskReport.jsx'
 
-function levelClassName(level) {
-  if (level === 'High') return 'border-cyber-alert/40 bg-cyber-alert/10 text-cyber-alert'
-  if (level === 'Medium') return 'border-cyber-amber/40 bg-cyber-amber/10 text-cyber-amber'
-  return 'border-cyber-safe/40 bg-cyber-safe/10 text-cyber-safe'
+const chartColors = ['#1ee3cf', '#ffb84d', '#ff5d73']
+
+function alertClassName(severity) {
+  if (severity === 'critical') return 'border-cyber-alert/30 bg-cyber-alert/10 text-cyber-alert'
+  if (severity === 'high') return 'border-cyber-amber/30 bg-cyber-amber/10 text-cyber-amber'
+  return 'border-cyber-safe/30 bg-cyber-safe/10 text-cyber-safe'
 }
 
-export default function IdentityRiskDashboard({ assessment, recommendations, persistenceMode }) {
-  const navigate = useNavigate()
-  const {
-    profile,
-    risk,
-    muleRisk,
-    deviceRisk,
-    fraudCheck,
-    transactionPattern,
-    healthScore,
-    timeline90Days,
-    alerts,
-    telemetry,
-    charts,
-    createdAt,
-  } = assessment
+function recommendationClassName(priority) {
+  if (priority === 'high') return 'border-cyber-alert/25 bg-cyber-alert/10'
+  if (priority === 'medium') return 'border-cyber-amber/25 bg-cyber-amber/10'
+  return 'border-cyber-safe/25 bg-cyber-safe/10'
+}
 
-  const [showDeviceFlags, setShowDeviceFlags] = useState(false)
+export default function IdentityRiskDashboard({ riskSnapshot, patterns, insights, recommendations }) {
+  const { risk, detections, alerts, fraudFlow, charts, submittedAt, persistenceMode } = riskSnapshot
 
   return (
     <div className="space-y-6">
-      {/* Overview Section */}
       <section className="glass-panel rounded-[32px] p-6 soft-ring sm:p-8">
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="flex flex-wrap items-start justify-between gap-6">
           <div>
-            <div className="section-title">Security Overview</div>
-            <div className="mt-2 font-display text-4xl font-bold text-white">Digital identity security dashboard</div>
+            <div className="section-title">Fraud Intelligence Dashboard</div>
+            <div className="mt-2 font-display text-4xl font-bold text-white">Investigation-style identity risk view</div>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-cyber-mist">
-              This simulated assessment shows how your account and connection footprints can affect likelihood
-              ratings of identity misuse and mobile-linked financial fraud.
+              This dashboard shows how a simple digital identity footprint can translate into misuse risk, mule-account exposure, and SIM swap vulnerability.
             </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <span className={`rounded-full border px-4 py-2 text-sm font-semibold ${levelClassName(risk.level)}`}>
-                {risk.level} Likelihood
-              </span>
-              <span className="badge-chip">Storage: {persistenceMode === 'mongo' ? 'Database Saved' : 'Temporary Session'}</span>
-              <span className="badge-chip">Generated: {new Date(createdAt).toLocaleString()}</span>
-            </div>
-
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-              <MetricCard label="Likelihood rating" value={risk.score} hint="Composite risk score" />
-              <MetricCard label="Footprint size" value={telemetry.digitalSurfaceIndex} hint="Total linked apps and accounts" />
-              <MetricCard label="Recovery security" value={telemetry.recoveryChannelStrength === 'Strong' ? 'High' : 'Low'} hint="Based on two-step verification" />
-            </div>
           </div>
 
-          {/* Identity Health Score Card */}
-          <div className="rounded-[28px] border border-white/10 bg-gradient-to-br from-cyber-panel via-[#0a1024] to-black/25 p-6 flex flex-col justify-between">
-            <div>
-              <div className="section-title">Digital Identity Health Score</div>
-              <div className="mt-4 flex items-baseline gap-2">
-                <span className="font-display text-7xl font-bold text-white">{healthScore}</span>
-                <span className="text-sm text-cyber-mist">/ 1000 pts</span>
-              </div>
-              <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className={`h-full rounded-full ${healthScore >= 750 ? 'bg-cyber-safe' : healthScore >= 450 ? 'bg-cyber-amber' : 'bg-cyber-alert'}`}
-                  style={{ width: `${(healthScore / 1000) * 100}%` }}
-                />
-              </div>
-              <p className="mt-4 text-xs leading-5 text-cyber-mist">
-                A higher score indicates a stronger digital profile with robust recovery channels, minimal dormant linkages, and lower fraudulent pattern matching.
-              </p>
-            </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => navigate('/threats')}
-                className="rounded-full border border-cyber-glow/40 bg-cyber-glow/10 px-5 py-3 font-semibold text-cyber-glow transition hover:bg-cyber-glow/15 text-sm"
-              >
-                Run threat simulations
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/input')}
-                className="rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 font-semibold text-white transition hover:bg-white/[0.08] text-sm"
-              >
-                Update identity inputs
-              </button>
-            </div>
+          <div className="flex flex-col gap-3 text-sm text-cyber-mist">
+            <span className="badge-chip">Stored in {persistenceMode} mode</span>
+            <span className="badge-chip">Updated {new Date(submittedAt).toLocaleString()}</span>
           </div>
+        </div>
+
+        <div className="mt-6 flex flex-wrap gap-4">
+          <Link
+            to="/input"
+            className="rounded-full border border-cyber-glow/30 bg-cyber-glow/10 px-5 py-2.5 font-semibold text-cyber-glow transition hover:bg-cyber-glow/15"
+          >
+            Re-run assessment
+          </Link>
+          <Link
+            to="/threats"
+            className="rounded-full border border-white/10 bg-white/[0.04] px-5 py-2.5 font-semibold text-white transition hover:bg-white/[0.08]"
+          >
+            View threat simulations
+          </Link>
         </div>
       </section>
 
-      {/* Advanced Analysis Grid */}
-      <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {/* Mule Account Risk Card */}
-        <article className="glass-panel rounded-3xl p-6 soft-ring flex flex-col justify-between">
-          <div>
-            <div className="section-title text-cyber-amber">Mule Account Risk</div>
-            <div className="mt-3 flex items-baseline gap-1">
-              <span className="font-display text-4xl font-bold text-white">{muleRisk.probabilityPercentage}%</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${levelClassName(muleRisk.level)}`}>
-                {muleRisk.level}
-              </span>
-            </div>
-            <p className="mt-3 text-xs leading-relaxed text-cyber-mist">
-              {muleRisk.rationale}
-            </p>
-          </div>
-          <div className="mt-4 pt-3 border-t border-white/5">
-            <span className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">Key drivers:</span>
-            <ul className="text-[11px] text-cyber-mist space-y-1 list-disc pl-3">
-              {muleRisk.drivers.slice(0, 3).map((driver, idx) => (
-                <li key={idx}>{driver}</li>
-              ))}
-            </ul>
-          </div>
-        </article>
+      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <RiskCard risk={risk} detections={detections} />
 
-        {/* Device Rating Card */}
-        <article className="glass-panel rounded-3xl p-6 soft-ring flex flex-col justify-between">
-          <div>
-            <div className="section-title text-cyber-glow">Device Rating</div>
-            <div className="mt-3 flex items-baseline gap-1">
-              <span className="font-display text-4xl font-bold text-white">{deviceRisk.score}</span>
-              <span className="text-xs text-cyber-mist">/ 100 Risk</span>
-            </div>
-            <p className="mt-3 text-xs leading-relaxed text-cyber-mist">
-              Simulates trust rating based on verification frequency, device age, and associated hardware identifiers.
-            </p>
+        <section className="glass-panel rounded-[32px] p-6 soft-ring sm:p-8">
+          <div className="section-title">Alerts</div>
+          <div className="mt-5 space-y-4">
+            {alerts.map((alert) => (
+              <article key={alert.title} className={`rounded-3xl border p-5 ${alertClassName(alert.severity)}`}>
+                <div className="text-xs uppercase tracking-[0.2em]">{alert.severity}</div>
+                <h3 className="mt-3 text-lg font-semibold text-white">{alert.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-cyber-mist">{alert.description}</p>
+              </article>
+            ))}
           </div>
-          <div className="mt-4 pt-3 border-t border-white/5">
-            <button
-              type="button"
-              onClick={() => setShowDeviceFlags(!showDeviceFlags)}
-              className="text-xs text-cyber-glow hover:underline block"
-            >
-              {showDeviceFlags ? 'Hide verification details' : 'Show verification details'}
-            </button>
-            {showDeviceFlags && (
-              <ul className="mt-2 text-[10px] text-cyber-mist space-y-1 list-disc pl-3 max-h-24 overflow-y-auto">
-                {deviceRisk.flags.map((flag, idx) => (
-                  <li key={idx}>{flag}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </article>
-
-        {/* Simulated Database Status Card */}
-        <article className="glass-panel rounded-3xl p-6 soft-ring flex flex-col justify-between">
-          <div>
-            <div className="section-title text-cyber-safe">Simulated Database Status</div>
-            <p className="mt-2 text-xs text-cyber-mist">
-              Checks if your profile identifiers match known risk patterns in simulated threat lists.
-            </p>
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-cyber-mist">Associated phone status:</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${fraudCheck.phoneFlag ? 'bg-cyber-alert/10 text-cyber-alert border border-cyber-alert/20' : 'bg-cyber-safe/10 text-cyber-safe border border-cyber-safe/20'}`}>
-                  {fraudCheck.phoneFlag ? 'Flagged' : 'Clean'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-cyber-mist">Associated email status:</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${fraudCheck.emailFlag ? 'bg-cyber-alert/10 text-cyber-alert border border-cyber-alert/20' : 'bg-cyber-safe/10 text-cyber-safe border border-cyber-safe/20'}`}>
-                  {fraudCheck.emailFlag ? 'Flagged' : 'Clean'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-cyber-mist">Payment links status:</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${fraudCheck.upiFlag ? 'bg-cyber-alert/10 text-cyber-alert border border-cyber-alert/20' : 'bg-cyber-safe/10 text-cyber-safe border border-cyber-safe/20'}`}>
-                  {fraudCheck.upiFlag ? 'Flagged' : 'Clean'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        {/* Transaction Velocity Classifier Card */}
-        <article className="glass-panel rounded-3xl p-6 soft-ring flex flex-col justify-between">
-          <div>
-            <div className="section-title text-cyber-mist">Transaction Classifier</div>
-            <div className="mt-3 flex items-center gap-2">
-              <span className={`h-2.5 w-2.5 rounded-full ${transactionPattern.patternDetected ? 'bg-cyber-alert' : 'bg-cyber-safe'}`} />
-              <span className="font-semibold text-white text-sm">
-                {transactionPattern.patternDetected ? 'Suspicious Pattern' : 'Normal Velocity'}
-              </span>
-            </div>
-            <p className="mt-3 text-xs leading-relaxed text-cyber-mist">
-              Evaluates current daily transaction velocity against typical account activity cycles.
-            </p>
-          </div>
-          <div className="mt-4 pt-3 border-t border-white/5">
-            <span className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">Pattern detected:</span>
-            <div className="text-xs text-white font-medium">{transactionPattern.patternType}</div>
-            <div className="text-[10px] text-cyber-mist mt-0.5">Severity: {transactionPattern.severity}</div>
-          </div>
-        </article>
+        </section>
       </section>
 
-      {/* Visual Charts Section */}
       <section className="grid gap-6 xl:grid-cols-2">
-        <RiskBreakdownChart data={charts.breakdown} />
-        <RiskTimelineChart data={timeline90Days} />
+        <section className="glass-panel rounded-[32px] p-6 soft-ring sm:p-8">
+          <div className="section-title">Score Breakdown</div>
+          <div className="mt-2 font-display text-3xl font-bold text-white">What drives the score</div>
+          <div className="mt-6 h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={charts.breakdown}>
+                <CartesianGrid stroke="rgba(139, 162, 216, 0.12)" vertical={false} />
+                <XAxis dataKey="name" stroke="#8ba2d8" tickLine={false} axisLine={false} fontSize={12} />
+                <YAxis stroke="#8ba2d8" tickLine={false} axisLine={false} fontSize={12} />
+                <Tooltip
+                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                  contentStyle={{ background: '#0d1326', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px' }}
+                />
+                <Bar dataKey="value" radius={[10, 10, 0, 0]} fill="#1ee3cf" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+
+        <section className="glass-panel rounded-[32px] p-6 soft-ring sm:p-8">
+          <div className="section-title">Fraud Signal Levels</div>
+          <div className="mt-2 font-display text-3xl font-bold text-white">Relative signal strength</div>
+          <div className="mt-6 h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={charts.signalSummary}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={70}
+                  outerRadius={108}
+                  paddingAngle={4}
+                >
+                  {charts.signalSummary.map((entry, index) => (
+                    <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{ background: '#0d1326', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {charts.signalSummary.map((item, index) => (
+              <div key={item.name} className="rounded-2xl border border-white/10 bg-black/15 p-4">
+                <div className="flex items-center gap-3">
+                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: chartColors[index % chartColors.length] }} />
+                  <span className="text-sm text-white">{item.name}</span>
+                </div>
+                <div className="mt-3 text-2xl font-bold text-white">{item.value}</div>
+              </div>
+            ))}
+          </div>
+        </section>
       </section>
 
-      {/* Recommendations & Alerts */}
       <section className="grid gap-6 xl:grid-cols-2">
-        <AlertPanel alerts={alerts} />
-        <RecommendationList recommendations={recommendations} />
+        <PatternList patterns={patterns} />
+        <InsightBox insights={insights} />
       </section>
 
-      {/* Narrative Summary */}
-      <IdentityRiskReport assessment={assessment} />
+      <FraudFlowVisualizer steps={fraudFlow} />
+
+      <section className="glass-panel rounded-[32px] p-6 soft-ring sm:p-8">
+        <div className="section-title">Recommendations</div>
+        <div className="mt-2 font-display text-3xl font-bold text-white">What to do next</div>
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          {recommendations.map((recommendation) => (
+            <article key={recommendation.title} className={`rounded-3xl border p-5 ${recommendationClassName(recommendation.priority)}`}>
+              <div className="text-xs uppercase tracking-[0.2em] text-cyber-mist/70">{recommendation.priority} priority</div>
+              <h3 className="mt-3 text-lg font-semibold text-white">{recommendation.title}</h3>
+              <p className="mt-3 text-sm leading-7 text-cyber-mist">{recommendation.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <IdentityRiskReport riskSnapshot={riskSnapshot} patterns={patterns} recommendations={recommendations} />
     </div>
   )
 }

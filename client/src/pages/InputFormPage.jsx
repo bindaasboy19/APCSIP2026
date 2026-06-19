@@ -35,9 +35,9 @@ export default function InputFormPage() {
     <div className="space-y-6">
       <section className="glass-panel rounded-[32px] p-6 soft-ring sm:p-8">
         <div className="section-title">Step 2</div>
-        <div className="mt-2 font-display text-4xl font-bold text-white">Capture non-sensitive mock exposure data</div>
+        <div className="mt-2 font-display text-4xl font-bold text-white">Capture simple non-sensitive risk indicators</div>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-cyber-mist">
-          This assessment focuses on structural risk indicators only: linked accounts, phone line footprint, payment app configuration, two-step verification status, and dormant financial linkages.
+          The analyzer focuses on a few explainable signals: number of linked bank accounts, SIM count, 2FA status, and inactive account exposure.
         </p>
       </section>
 

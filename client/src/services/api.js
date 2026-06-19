@@ -33,7 +33,7 @@ async function request(path, options = {}) {
     throw error
   }
 
-  return payload?.data
+  return payload?.data ?? payload
 }
 
 export const api = {
@@ -43,73 +43,57 @@ export const api = {
       body: { email, password },
     })
   },
+
   verifyOtp(email, otp) {
     return request('/auth/verify-otp', {
       method: 'POST',
       body: { email, otp },
     })
   },
+
   submitIdentity(form, token) {
-    const payload = {
-      numberOfBankAccounts: Number(form.bankAccounts),
-      simCount: Number(form.simCount),
-      upiApps: Array.isArray(form.upiAppsUsed) ? form.upiAppsUsed.length : Number(form.upiApps ?? 0),
-      has2FA: Boolean(form.twoFactorEnabled),
-      hasInactiveAccounts: Boolean(form.inactiveAccounts),
-      accountAgeDays: Number(form.accountAgeDays ?? 365),
-      avgTransactionsPerDay: Number(form.avgTransactionsPerDay ?? 2),
-    }
     return request('/user/input', {
       method: 'POST',
       token,
-      body: payload,
+      body: {
+        numberOfBankAccounts: Number(form.numberOfBankAccounts),
+        simCount: Number(form.simCount),
+        has2FA: Boolean(form.has2FA),
+        hasInactiveAccounts: Boolean(form.hasInactiveAccounts),
+      },
     })
   },
-  getRiskScore(token, signal) {
+
+  getRisk(token, signal) {
     return request('/user/risk', {
       token,
       signal,
     })
   },
-  getMuleRisk(token, signal) {
-    return request('/user/mule-risk', {
+
+  getPatterns(token, signal) {
+    return request('/user/patterns', {
       token,
       signal,
     })
   },
-  getDeviceRisk(token, signal) {
-    return request('/user/device-risk', {
+
+  getInsights(token, signal) {
+    return request('/user/insights', {
       token,
       signal,
     })
   },
+
   getRecommendations(token, signal) {
-    return request('/recommendations', {
+    return request('/user/recommendations', {
       token,
       signal,
     })
   },
-  getThreatScenarios(token, signal) {
+
+  getThreats(token, signal) {
     return request('/threats', {
-      token,
-      signal,
-    })
-  },
-  playThreatScenario(scenarioId, choices, token) {
-    return request('/threats/play', {
-      method: 'POST',
-      token,
-      body: { scenarioId, choices },
-    })
-  },
-  getFraudCheck(token, signal) {
-    return request('/fraud-check', {
-      token,
-      signal,
-    })
-  },
-  getTransactionPattern(token, signal) {
-    return request('/transactions/pattern', {
       token,
       signal,
     })

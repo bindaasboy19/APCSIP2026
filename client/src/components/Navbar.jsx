@@ -18,11 +18,11 @@ export default function Navbar() {
         <div className="flex items-center gap-4">
           <Link to="/" className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyber-glow/30 bg-cyber-glow/10 text-cyber-glow shadow-glow">
-              <span className="font-display text-lg font-bold">A</span>
+              <span className="font-display text-lg font-bold">D</span>
             </div>
             <div>
-              <div className="font-display text-base font-bold tracking-wide text-white">Aadhaar Risk Analyzer</div>
-              <div className="text-xs uppercase tracking-[0.24em] text-cyber-mist/70">Simulated security intelligence</div>
+              <div className="font-display text-base font-bold tracking-wide text-white">Digital Identity Fraud Analyzer</div>
+              <div className="text-xs uppercase tracking-[0.24em] text-cyber-mist/70">Simulated fraud intelligence</div>
             </div>
           </Link>
         </div>
@@ -35,13 +35,13 @@ export default function Navbar() {
           {isAuthenticated ? (
             <>
               <NavLink to="/input" className={navClassName}>
-                Identity Input
+                Input
               </NavLink>
               <NavLink to="/dashboard" className={navClassName}>
                 Dashboard
               </NavLink>
               <NavLink to="/threats" className={navClassName}>
-                Simulations
+                Threats
               </NavLink>
               <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-cyber-mist md:inline-flex">
                 {user?.maskedEmail}

@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [otp, setOtp] = useState('')
   const [demoOtp, setDemoOtp] = useState('')
   const [maskedEmail, setMaskedEmail] = useState('')
+  const [accountProvisioned, setAccountProvisioned] = useState(false)
   const [step, setStep] = useState('request')
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -33,6 +34,8 @@ export default function LoginPage() {
       const data = await api.requestOtp(email, password)
       setDemoOtp(data.demoOtp ?? '')
       setMaskedEmail(data.maskedEmail)
+      setAccountProvisioned(Boolean(data.accountProvisioned))
+      setOtp('')
       setStep('verify')
     } catch (error) {
       setErrorMessage(error.message)
@@ -53,8 +56,7 @@ export default function LoginPage() {
         user: data.user,
       })
 
-      const nextPath = location.state?.from === '/dashboard' ? '/dashboard' : '/input'
-      navigate(nextPath, { replace: true })
+      navigate(location.state?.from ?? '/input', { replace: true })
     } catch (error) {
       setErrorMessage(error.message)
     } finally {
@@ -68,8 +70,7 @@ export default function LoginPage() {
         <div className="section-title">Authentication</div>
         <div className="mt-2 font-display text-4xl font-bold text-white">Secure simulated login</div>
         <p className="mt-4 max-w-2xl text-sm leading-7 text-cyber-mist">
-          Use a valid email address to request a demo verification code. The system securely
-          authenticates your request and issues a session token, without storing real credentials.
+          Sign in with email and password, then verify with a simulated OTP. If the email has not been used before, a safe demo account is provisioned automatically for this hackathon flow.
         </p>
 
         <form onSubmit={step === 'request' ? handleRequestOtp : handleVerifyOtp} className="mt-8 space-y-5">
@@ -92,13 +93,11 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="Enter password (min 8 characters)"
+                placeholder="Minimum 8 characters"
                 className="mt-3 w-full rounded-2xl border border-white/10 bg-black/15 px-4 py-3 text-white outline-none transition focus:border-cyber-glow/50 focus:bg-black/25"
               />
             </label>
-          ) : null}
-
-          {step === 'verify' ? (
+          ) : (
             <label className="block">
               <span className="text-sm font-medium text-white">Verification code</span>
               <input
@@ -111,7 +110,7 @@ export default function LoginPage() {
                 className="mt-3 w-full rounded-2xl border border-white/10 bg-black/15 px-4 py-3 text-white outline-none transition focus:border-cyber-glow/50 focus:bg-black/25"
               />
             </label>
-          ) : null}
+          )}
 
           {errorMessage ? (
             <div className="rounded-2xl border border-cyber-alert/30 bg-cyber-alert/10 px-4 py-3 text-sm text-cyber-alert">
@@ -124,36 +123,41 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full rounded-full border border-cyber-glow/40 bg-cyber-glow/10 px-6 py-3 font-semibold text-cyber-glow transition hover:bg-cyber-glow/15 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? 'Processing secure request...' : step === 'request' ? 'Send Verification Code' : 'Verify Code and login'}
+            {loading ? 'Processing secure request...' : step === 'request' ? 'Send simulated OTP' : 'Verify OTP and continue'}
           </button>
         </form>
       </section>
 
       <aside className="glass-panel rounded-[32px] p-8 soft-ring sm:p-10">
-        <div className="section-title">Verification Code Helper</div>
-        <div className="mt-2 font-display text-3xl font-bold text-white">Login verification status</div>
+        <div className="section-title">Demo Helper</div>
+        <div className="mt-2 font-display text-3xl font-bold text-white">Verification status</div>
 
-        <div className="mt-6 rounded-[28px] border border-white/10 bg-black/20 p-6">
-          <div className="text-sm text-cyber-mist">Current stage</div>
-          <div className="mt-2 font-display text-2xl font-bold text-white">
-            {step === 'request' ? 'Send Code' : 'Verify Code'}
+        <div className="mt-6 space-y-4">
+          <div className="rounded-[28px] border border-white/10 bg-black/20 p-6">
+            <div className="text-xs uppercase tracking-[0.2em] text-cyber-mist/70">Current step</div>
+            <div className="mt-2 text-2xl font-bold text-white">{step === 'request' ? 'Request OTP' : 'Verify OTP'}</div>
+            <p className="mt-4 text-sm leading-7 text-cyber-mist">
+              {!maskedEmail
+                ? 'Request an OTP to start the secure demo session.'
+                : accountProvisioned
+                ? 'A new demo account was prepared for this email so you can complete the flow without a separate signup step.'
+                : 'Existing demo account found. Continue with OTP verification after requesting a code.'}
+            </p>
           </div>
 
-          <div className="mt-6 space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-cyber-mist/70">Masked Address</div>
-              <div className="mt-2 text-lg font-semibold text-white">{maskedEmail || 'Waiting for request'}</div>
-            </div>
+          <div className="rounded-[28px] border border-white/10 bg-black/20 p-6">
+            <div className="text-xs uppercase tracking-[0.2em] text-cyber-mist/70">Masked email</div>
+            <div className="mt-2 text-lg font-semibold text-white">{maskedEmail || 'Waiting for request'}</div>
+          </div>
 
-            <div className="rounded-2xl border border-cyber-glow/20 bg-cyber-glow/10 p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-cyber-mist/70">Demo Verification Code</div>
-              <div className="mt-2 font-display text-4xl font-bold tracking-[0.35em] text-cyber-glow">
-                {demoOtp || '------'}
-              </div>
-              <p className="mt-3 text-sm leading-6 text-cyber-mist">
-                In a real application, this code would be sent out-of-band to your phone or email. For this interactive demo, it is shown here so you can easily test the flow.
-              </p>
+          <div className="rounded-[28px] border border-cyber-glow/20 bg-cyber-glow/10 p-6">
+            <div className="text-xs uppercase tracking-[0.2em] text-cyber-mist/70">Demo OTP</div>
+            <div className="mt-3 font-display text-4xl font-bold tracking-[0.35em] text-cyber-glow">
+              {demoOtp || '------'}
             </div>
+            <p className="mt-4 text-sm leading-7 text-cyber-mist">
+              In production this code would be delivered out-of-band. For this demo it is shown here to keep the flow fast and testable.
+            </p>
           </div>
         </div>
       </aside>

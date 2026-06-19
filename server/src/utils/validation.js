@@ -3,6 +3,10 @@ function toInteger(value) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+function isBooleanLike(value) {
+  return [true, false, 'true', 'false', 1, 0, '1', '0'].includes(value)
+}
+
 export function sanitizeBoolean(value) {
   return value === true || value === 'true' || value === 1 || value === '1'
 }
@@ -32,16 +36,12 @@ export function validateIdentityPayload(payload = {}) {
     errors.push('simCount must be an integer.')
   }
 
-  if (toInteger(payload.upiApps) == null) {
-    errors.push('upiApps must be an integer.')
+  if (!isBooleanLike(payload.has2FA)) {
+    errors.push('has2FA must be a boolean.')
   }
 
-  if (toInteger(payload.accountAgeDays) == null) {
-    errors.push('accountAgeDays must be an integer.')
-  }
-
-  if (toInteger(payload.avgTransactionsPerDay) == null) {
-    errors.push('avgTransactionsPerDay must be an integer.')
+  if (!isBooleanLike(payload.hasInactiveAccounts)) {
+    errors.push('hasInactiveAccounts must be a boolean.')
   }
 
   return errors

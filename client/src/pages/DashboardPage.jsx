@@ -12,9 +12,10 @@ export default function DashboardPage() {
   const [state, setState] = useState({
     loading: true,
     errorMessage: '',
-    assessment: null,
+    riskSnapshot: null,
+    patterns: [],
+    insights: [],
     recommendations: [],
-    persistenceMode: 'memory',
   })
 
   useEffect(() => {
@@ -22,17 +23,20 @@ export default function DashboardPage() {
 
     async function loadDashboard() {
       try {
-        const [riskData, recommendationData] = await Promise.all([
-          api.getRiskScore(token, controller.signal),
+        const [riskSnapshot, patternData, insightData, recommendationData] = await Promise.all([
+          api.getRisk(token, controller.signal),
+          api.getPatterns(token, controller.signal),
+          api.getInsights(token, controller.signal),
           api.getRecommendations(token, controller.signal),
         ])
 
         setState({
           loading: false,
           errorMessage: '',
-          assessment: riskData.assessment,
+          riskSnapshot,
+          patterns: patternData.patterns,
+          insights: insightData.insights,
           recommendations: recommendationData.recommendations,
-          persistenceMode: riskData.persistenceMode,
         })
       } catch (error) {
         if (error.name === 'AbortError') {
@@ -67,7 +71,7 @@ export default function DashboardPage() {
     return (
       <div className="glass-panel rounded-[32px] p-10 text-center soft-ring">
         <div className="section-title">Loading</div>
-        <div className="mt-3 font-display text-3xl font-bold text-white">Building your risk dashboard...</div>
+        <div className="mt-3 font-display text-3xl font-bold text-white">Building your fraud intelligence dashboard...</div>
       </div>
     )
   }
@@ -84,9 +88,10 @@ export default function DashboardPage() {
 
   return (
     <IdentityRiskDashboard
-      assessment={state.assessment}
+      riskSnapshot={state.riskSnapshot}
+      patterns={state.patterns}
+      insights={state.insights}
       recommendations={state.recommendations}
-      persistenceMode={state.persistenceMode}
     />
   )
 }

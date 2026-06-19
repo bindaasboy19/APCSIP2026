@@ -1,5 +1,5 @@
 {
-  "name": "aadhaar-risk-analyzer-server",
+  "name": "digital-identity-fraud-intelligence-risk-analyzer-server",
   "version": "1.0.0",
   "private": true,
   "type": "module",

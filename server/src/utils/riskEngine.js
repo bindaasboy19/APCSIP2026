@@ -1,180 +1,221 @@
 import { sanitizeBoolean, sanitizeCount } from './validation.js'
 
+const MAX_RISK_SCORE = 170
+
+const FRAUD_FLOW = [
+  {
+    title: 'Stolen Identity',
+    description: 'Leaked or carelessly shared identity details are collected by a fraudster.',
+  },
+  {
+    title: 'Fake KYC',
+    description: 'Compromised documents are reused to pass lightweight onboarding or recovery checks.',
+  },
+  {
+    title: 'Bank Account Created',
+    description: 'A new payment or bank account is opened, linked, or accessed using the stolen identity.',
+  },
+  {
+    title: 'Money Transfer',
+    description: 'Simulated funds are moved quickly to make the activity harder to reverse.',
+  },
+  {
+    title: 'Mule Account Network',
+    description: 'Transfers pass through additional accounts to hide the real source and destination.',
+  },
+  {
+    title: 'Cash Withdrawal',
+    description: 'Simulated cash-out or final transfer completes the fraud before the victim notices.',
+  },
+]
+
+function levelToSignalValue(level) {
+  if (level === 'High') return 85
+  if (level === 'Medium') return 55
+  return 20
+}
+
+function calculateMuleRisk(profile) {
+  if (profile.numberOfBankAccounts >= 5 && profile.hasInactiveAccounts) {
+    return 'High'
+  }
+
+  if (profile.numberOfBankAccounts >= 4 || (profile.numberOfBankAccounts >= 3 && profile.hasInactiveAccounts)) {
+    return 'Medium'
+  }
+
+  return 'Low'
+}
+
+function calculateSimSwapRisk(profile) {
+  if (profile.simCount >= 3 || (profile.simCount > 1 && !profile.has2FA)) {
+    return 'High'
+  }
+
+  if (profile.simCount > 1) {
+    return 'Medium'
+  }
+
+  return 'Low'
+}
+
+function buildPatterns(profile, detections) {
+  const patterns = []
+
+  if (detections.muleRisk !== 'Low') {
+    patterns.push({
+      id: 'mule-account-risk',
+      title: 'Possible mule account risk',
+      severity: detections.muleRisk,
+      explanation:
+        detections.muleRisk === 'High'
+          ? 'A large number of bank accounts plus inactive accounts can create a realistic pass-through path for suspicious fund movement.'
+          : 'A wider banking footprint increases the chance of an account being misused to receive or forward suspicious funds.',
+    })
+  }
+
+  if (profile.hasInactiveAccounts) {
+    patterns.push({
+      id: 'inactive-account-exposure',
+      title: 'Inactive account exposure',
+      severity: detections.muleRisk === 'High' ? 'High' : 'Medium',
+      explanation:
+        'Dormant accounts are often monitored less closely, which makes them attractive for quiet reuse or delayed detection.',
+    })
+  }
+
+  if (detections.simSwapRisk !== 'Low') {
+    patterns.push({
+      id: 'sim-swap-risk',
+      title: 'SIM swap risk',
+      severity: detections.simSwapRisk,
+      explanation:
+        'Multiple active SIM connections can widen OTP interception and number-port abuse opportunities.',
+    })
+  }
+
+  if (!profile.has2FA) {
+    patterns.push({
+      id: 'weak-authentication',
+      title: 'Weak authentication controls',
+      severity: 'High',
+      explanation:
+        'Without two-factor authentication, a compromised recovery channel can quickly become an account-takeover path.',
+    })
+  }
+
+  if (patterns.length === 0) {
+    patterns.push({
+      id: 'contained-surface',
+      title: 'Contained attack surface',
+      severity: 'Low',
+      explanation: 'The current simulated profile shows relatively few strong fraud indicators.',
+    })
+  }
+
+  return patterns
+}
+
+function buildInsights(profile, risk, detections) {
+  const insights = []
+
+  if (risk.level === 'High') {
+    insights.push({
+      title: 'High exposure to identity misuse',
+      description:
+        'The combined account footprint and security gaps create multiple realistic paths for fraudulent access or misuse.',
+    })
+  } else if (risk.level === 'Medium') {
+    insights.push({
+      title: 'Moderate identity exposure detected',
+      description:
+        'The profile is not critical, but it contains enough signals to justify tighter controls and closer monitoring.',
+    })
+  } else {
+    insights.push({
+      title: 'Limited immediate fraud indicators',
+      description:
+        'The current profile is comparatively contained, though basic monitoring and good digital hygiene still matter.',
+    })
+  }
+
+  if (detections.muleRisk === 'High') {
+    insights.push({
+      title: 'Pattern resembles mule account risk',
+      description:
+        'High account sprawl combined with inactive accounts can support pass-through movement of suspicious funds.',
+    })
+  } else if (detections.muleRisk === 'Medium') {
+    insights.push({
+      title: 'Banking footprint needs review',
+      description:
+        'A wider banking footprint increases the number of places where identity misuse can hide or escalate.',
+    })
+  }
+
+  if (!profile.has2FA) {
+    insights.push({
+      title: 'Weak security practices detected',
+      description:
+        'Missing 2FA makes credential reset abuse and follow-on fraud much easier after a single compromise.',
+    })
+  }
+
+  if (profile.simCount > 1) {
+    insights.push({
+      title: 'Multiple SIMs increase recovery-channel risk',
+      description:
+        'More than one active SIM can complicate OTP control and increase the chance of SIM swap abuse.',
+    })
+  }
+
+  if (profile.hasInactiveAccounts) {
+    insights.push({
+      title: 'Dormant accounts may delay detection',
+      description:
+        'Unused accounts tend to receive less attention, which can give fraud more time to go unnoticed.',
+    })
+  }
+
+  return insights
+}
+
+function buildCharts(risk, detections) {
+  return {
+    breakdown: risk.breakdown.map((item) => ({
+      name: item.label,
+      value: item.points,
+    })),
+    signalSummary: [
+      {
+        name: 'Identity Misuse',
+        value: levelToSignalValue(detections.identityMisuseRisk),
+      },
+      {
+        name: 'Mule Risk',
+        value: levelToSignalValue(detections.muleRisk),
+      },
+      {
+        name: 'SIM Swap',
+        value: levelToSignalValue(detections.simSwapRisk),
+      },
+    ],
+  }
+}
+
 export function normalizeIdentityPayload(payload = {}) {
   return {
     numberOfBankAccounts: sanitizeCount(payload.numberOfBankAccounts, 0, 10, 0),
     simCount: sanitizeCount(payload.simCount, 1, 5, 1),
-    upiApps: sanitizeCount(payload.upiApps, 0, 6, 0),
     has2FA: sanitizeBoolean(payload.has2FA),
     hasInactiveAccounts: sanitizeBoolean(payload.hasInactiveAccounts),
-    accountAgeDays: sanitizeCount(payload.accountAgeDays, 1, 3650, 365),
-    avgTransactionsPerDay: sanitizeCount(payload.avgTransactionsPerDay, 0, 1000, 2),
   }
 }
 
 export function resolveRiskLevel(score) {
-  if (score <= 45) return 'Low'
-  if (score <= 85) return 'Medium'
+  if (score <= 40) return 'Low'
+  if (score <= 80) return 'Medium'
   return 'High'
-}
-
-export function calculateMuleRisk(profile) {
-  let probabilityPercentage = 10
-  const drivers = []
-
-  if (profile.numberOfBankAccounts >= 5) {
-    probabilityPercentage += 25
-    drivers.push('High number of linked bank accounts')
-  } else if (profile.numberOfBankAccounts >= 3) {
-    probabilityPercentage += 15
-    drivers.push('Multiple linked bank accounts')
-  }
-
-  if (profile.hasInactiveAccounts) {
-    probabilityPercentage += 20
-    drivers.push('Inactive accounts increase stealth misuse potential')
-  }
-
-  if (!profile.has2FA) {
-    probabilityPercentage += 15
-    drivers.push('Low security controls increase account re-use risk')
-  }
-
-  if (profile.simCount > 1) {
-    probabilityPercentage += 10
-    drivers.push('Multiple SIMs expand identity control exposure')
-  }
-
-  if (profile.upiApps >= 3) {
-    probabilityPercentage += 10
-    drivers.push('Broad UPI app usage expands transaction routing surface')
-  }
-
-  if (profile.avgTransactionsPerDay > 15) {
-    probabilityPercentage += 15
-    drivers.push('High transaction frequency spikes risk profile')
-  }
-
-  if (profile.numberOfBankAccounts >= 4 && profile.hasInactiveAccounts) {
-    probabilityPercentage = Math.max(probabilityPercentage, 75)
-  }
-
-  probabilityPercentage = Math.min(95, probabilityPercentage)
-  const level = probabilityPercentage >= 70 ? 'High' : probabilityPercentage >= 35 ? 'Medium' : 'Low'
-
-  return {
-    score: probabilityPercentage,
-    level,
-    drivers,
-    probabilityPercentage,
-    rationale:
-      level === 'High'
-        ? 'The simulated profile mirrors several patterns associated with identity misuse and mule-account facilitation.'
-        : level === 'Medium'
-          ? 'Some characteristics could support misuse if an attacker gains control of linked channels.'
-          : 'The current simulated footprint shows relatively few strong mule-risk indicators.',
-  }
-}
-
-export function calculateDeviceRisk(profile) {
-  const flags = []
-  let score = 10
-
-  if (!profile.has2FA) {
-    score += 15
-    flags.push('Verification bypass vulnerability (lack of two-step verification)')
-  }
-
-  if (profile.avgTransactionsPerDay > 15) {
-    score += 20
-    flags.push('High transaction volume from a single hardware token')
-  }
-
-  if (profile.numberOfBankAccounts >= 5) {
-    score += 25
-    flags.push('Multiple KYC attempts registered from the same hardware fingerprint')
-  }
-
-  if (profile.simCount > 2) {
-    score += 25
-    flags.push('Device hardware-telemetry location mismatch (IP vs SIM carrier)')
-  }
-
-  if (profile.accountAgeDays < 90) {
-    score += 15
-    flags.push('New device enrollment flagged within recent KYC window')
-  }
-
-  score = Math.min(100, score)
-
-  return {
-    score,
-    flags: flags.length > 0 ? flags : ['No suspicious device flags registered'],
-  }
-}
-
-export function evaluateFraudCheck(profile) {
-  return {
-    phoneFlag: profile.simCount > 3 || profile.numberOfBankAccounts >= 6,
-    emailFlag: !profile.has2FA && profile.hasInactiveAccounts,
-    upiFlag: profile.upiApps >= 4,
-  }
-}
-
-export function evaluateTransactionPattern(profile) {
-  if (profile.avgTransactionsPerDay > 20 && profile.hasInactiveAccounts) {
-    return {
-      patternDetected: true,
-      patternType: 'Dormant Account Activation Spike',
-      severity: 'Critical',
-    }
-  }
-
-  if (profile.avgTransactionsPerDay > 12) {
-    return {
-      patternDetected: true,
-      patternType: 'Rapid Fund Forwarding (Layering)',
-      severity: 'High',
-    }
-  }
-
-  if (profile.numberOfBankAccounts >= 5) {
-    return {
-      patternDetected: true,
-      patternType: 'Repeated Beneficiary Sprawl',
-      severity: 'Medium',
-    }
-  }
-
-  return {
-    patternDetected: false,
-    patternType: 'Normal transaction velocity',
-    severity: 'Low',
-  }
-}
-
-export function calculateHealthScore(profile, riskScore, fraudCheck) {
-  let score = 1000
-
-  if (!profile.has2FA) score -= 250
-  if (profile.hasInactiveAccounts) score -= 150
-  if (profile.numberOfBankAccounts > 3) score -= (profile.numberOfBankAccounts - 3) * 60
-  if (profile.simCount > 1) score -= (profile.simCount - 1) * 70
-  if (fraudCheck.phoneFlag || fraudCheck.emailFlag || fraudCheck.upiFlag) score -= 120
-
-  return Math.max(100, score)
-}
-
-export function generateTimeline(profile, finalScore) {
-  const level = resolveRiskLevel(finalScore)
-  return [
-    { day: 15, riskScore: 20, status: 'Normal' },
-    { day: 30, riskScore: 25, status: 'Normal' },
-    { day: 45, riskScore: Math.min(50, Math.round(finalScore * 0.45)), status: 'Suspicious Activity' },
-    { day: 60, riskScore: Math.min(70, Math.round(finalScore * 0.65)), status: 'High Volatility' },
-    { day: 75, riskScore: Math.min(95, Math.round(finalScore * 0.85)), status: 'Suspicious Linkages' },
-    { day: 90, riskScore: finalScore, status: level + ' Risk' },
-  ]
 }
 
 export function calculateRiskAssessment(payload = {}) {
@@ -201,66 +242,30 @@ export function calculateRiskAssessment(payload = {}) {
       label: 'Two-step verification disabled',
       points: profile.has2FA ? 0 : 30,
     },
-    {
-      key: 'accountAgeDays',
-      label: 'New account vulnerability (<90 days)',
-      points: profile.accountAgeDays < 90 ? 20 : 0,
-    },
-    {
-      key: 'avgTransactionsPerDay',
-      label: 'High transaction frequency',
-      points: profile.avgTransactionsPerDay > 10 ? 15 : 0,
-    },
-    {
-      key: 'upiApps',
-      label: 'Multiple UPI applications (>2)',
-      points: profile.upiApps > 2 ? 10 : 0,
-    },
   ]
 
   const score = breakdown.reduce((sum, item) => sum + item.points, 0)
   const level = resolveRiskLevel(score)
-  const muleRisk = calculateMuleRisk(profile)
-  const deviceRisk = calculateDeviceRisk(profile)
-  const fraudCheck = evaluateFraudCheck(profile)
-  const transactionPattern = evaluateTransactionPattern(profile)
-  const healthScore = calculateHealthScore(profile, score, fraudCheck)
-  const timeline90Days = generateTimeline(profile, score)
+  const risk = {
+    score,
+    visualScore: Math.min(100, Math.round((score / MAX_RISK_SCORE) * 100)),
+    level,
+    formula: '(banks * 10) + (inactive ? 25 : 0) + (simCount > 1 ? 15 : 0) + (!has2FA ? 30 : 0)',
+    breakdown,
+  }
+  const detections = {
+    identityMisuseRisk: level,
+    muleRisk: calculateMuleRisk(profile),
+    simSwapRisk: calculateSimSwapRisk(profile),
+  }
 
   return {
     profile,
-    risk: {
-      score,
-      visualScore: Math.min(score, 120),
-      level,
-      formula:
-        '(banks*10) + (inactive?25) + (simCount>1?15) + (!has2FA?30) + (age<90?20) + (tx>10?15) + (upi>2?10)',
-      breakdown,
-    },
-    muleRisk,
-    deviceRisk,
-    fraudCheck,
-    transactionPattern,
-    healthScore,
-    timeline90Days,
-    charts: {
-      breakdown,
-      surfaceBreakdown: [
-        { name: 'Bank Accounts', value: profile.numberOfBankAccounts },
-        { name: 'SIM Cards', value: profile.simCount },
-        { name: 'UPI Apps', value: Math.max(profile.upiApps, 1) },
-      ],
-      muleSignals: [
-        { name: 'Accounts', value: profile.numberOfBankAccounts >= 5 ? 3 : profile.numberOfBankAccounts >= 3 ? 2 : 1 },
-        { name: 'Inactive', value: profile.hasInactiveAccounts ? 3 : 1 },
-        { name: '2FA Weakness', value: profile.has2FA ? 1 : 3 },
-        { name: 'SIM Spread', value: profile.simCount > 1 ? 2 : 1 },
-      ],
-    },
-    telemetry: {
-      digitalSurfaceIndex: profile.numberOfBankAccounts + profile.simCount + profile.upiApps,
-      recoveryChannelStrength: profile.has2FA ? 'Strong' : 'Weak',
-      inactiveExposureWindow: profile.hasInactiveAccounts ? 'Open' : 'Closed',
-    },
+    risk,
+    detections,
+    patterns: buildPatterns(profile, detections),
+    insights: buildInsights(profile, risk, detections),
+    fraudFlow: FRAUD_FLOW,
+    charts: buildCharts(risk, detections),
   }
 }

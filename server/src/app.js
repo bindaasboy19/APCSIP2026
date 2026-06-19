@@ -6,7 +6,6 @@ import morgan from 'morgan'
 import { env } from './config/env.js'
 import { errorHandler, notFound } from './middleware/errorHandler.js'
 import authRoutes from './routes/authRoutes.js'
-import insightRoutes from './routes/insightRoutes.js'
 import threatRoutes from './routes/threatRoutes.js'
 import userRoutes from './routes/userRoutes.js'
 
@@ -24,14 +23,13 @@ app.use(morgan(env.nodeEnv === 'development' ? 'dev' : 'combined'))
 app.get('/api/health', (_req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Aadhaar-based digital identity misuse and mule risk API is healthy.',
+    message: 'Digital Identity Fraud Intelligence & Risk Analyzer API is healthy.',
   })
 })
 
 app.use('/api/auth', authRoutes)
 app.use('/api/user', userRoutes)
 app.use('/api/threats', threatRoutes)
-app.use('/api', insightRoutes)
 
 app.use(notFound)
 app.use(errorHandler)

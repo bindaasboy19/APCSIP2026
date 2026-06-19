@@ -1,5 +1,6 @@
 import { saveAssessment } from '../services/assessmentStore.js'
 import { buildAlerts } from '../utils/alertEngine.js'
+import { buildRecommendations } from '../utils/recommendationEngine.js'
 import { calculateRiskAssessment } from '../utils/riskEngine.js'
 import { validateIdentityPayload } from '../utils/validation.js'
 
@@ -15,6 +16,7 @@ export async function submitIdentity(req, res, next) {
 
     const computedAssessment = calculateRiskAssessment(req.body)
     const alerts = buildAlerts(computedAssessment)
+    const recommendations = buildRecommendations(computedAssessment)
 
     const assessment = await saveAssessment({
       userId: req.user.id,
@@ -22,6 +24,7 @@ export async function submitIdentity(req, res, next) {
       assessment: {
         ...computedAssessment,
         alerts,
+        recommendations,
       },
     })
 

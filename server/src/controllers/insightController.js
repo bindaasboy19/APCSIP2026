@@ -1,6 +1,5 @@
 import { getPersistenceMode } from '../config/db.js'
 import { findLatestAssessment } from '../services/assessmentStore.js'
-import { buildRecommendations } from '../utils/recommendationEngine.js'
 
 function createError(status, message) {
   const error = new Error(message)
@@ -18,14 +17,21 @@ async function requireAssessment(userId) {
   return assessment
 }
 
-export async function getRiskScore(req, res, next) {
+export async function getRisk(req, res, next) {
   try {
     const assessment = await requireAssessment(req.user.id)
 
     res.status(200).json({
       success: true,
       data: {
-        assessment,
+        assessmentId: assessment.id,
+        profile: assessment.profile,
+        risk: assessment.risk,
+        detections: assessment.detections,
+        alerts: assessment.alerts,
+        fraudFlow: assessment.fraudFlow,
+        charts: assessment.charts,
+        submittedAt: assessment.createdAt,
         persistenceMode: getPersistenceMode(),
       },
     })
@@ -34,15 +40,14 @@ export async function getRiskScore(req, res, next) {
   }
 }
 
-export async function getMuleRisk(req, res, next) {
+export async function getPatterns(req, res, next) {
   try {
     const assessment = await requireAssessment(req.user.id)
 
     res.status(200).json({
       success: true,
       data: {
-        muleRisk: assessment.muleRisk,
-        persistenceMode: getPersistenceMode(),
+        patterns: assessment.patterns,
       },
     })
   } catch (error) {
@@ -50,15 +55,14 @@ export async function getMuleRisk(req, res, next) {
   }
 }
 
-export async function getDeviceRisk(req, res, next) {
+export async function getInsights(req, res, next) {
   try {
     const assessment = await requireAssessment(req.user.id)
 
     res.status(200).json({
       success: true,
       data: {
-        deviceRisk: assessment.deviceRisk,
-        persistenceMode: getPersistenceMode(),
+        insights: assessment.insights,
       },
     })
   } catch (error) {
@@ -69,44 +73,11 @@ export async function getDeviceRisk(req, res, next) {
 export async function getRecommendations(req, res, next) {
   try {
     const assessment = await requireAssessment(req.user.id)
-    const recommendations = buildRecommendations(assessment)
 
     res.status(200).json({
       success: true,
       data: {
-        recommendations,
-        riskLevel: assessment.risk.level,
-        muleRiskLevel: assessment.muleRisk.level,
-      },
-    })
-  } catch (error) {
-    next(error)
-  }
-}
-
-export async function getFraudCheck(req, res, next) {
-  try {
-    const assessment = await requireAssessment(req.user.id)
-
-    res.status(200).json({
-      success: true,
-      data: {
-        fraudCheck: assessment.fraudCheck,
-      },
-    })
-  } catch (error) {
-    next(error)
-  }
-}
-
-export async function getTransactionPattern(req, res, next) {
-  try {
-    const assessment = await requireAssessment(req.user.id)
-
-    res.status(200).json({
-      success: true,
-      data: {
-        transactionPattern: assessment.transactionPattern,
+        recommendations: assessment.recommendations,
       },
     })
   } catch (error) {

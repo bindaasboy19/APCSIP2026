@@ -17,10 +17,20 @@ function toAssessmentShape(record) {
     id: String(record._id ?? record.id),
     profile: record.profile,
     risk: record.risk,
-    muleRisk: record.muleRisk,
-    alerts: record.alerts,
-    charts: record.charts,
-    telemetry: record.telemetry,
+    detections: record.detections ?? {
+      identityMisuseRisk: record?.risk?.level ?? 'Low',
+      muleRisk: 'Low',
+      simSwapRisk: 'Low',
+    },
+    patterns: record.patterns ?? [],
+    insights: record.insights ?? [],
+    recommendations: record.recommendations ?? [],
+    alerts: record.alerts ?? [],
+    fraudFlow: record.fraudFlow ?? [],
+    charts: record.charts ?? {
+      breakdown: [],
+      signalSummary: [],
+    },
     createdAt,
     updatedAt,
   }
@@ -32,10 +42,13 @@ export async function saveAssessment({ userId, emailHash, assessment }) {
     emailHash,
     profile: assessment.profile,
     risk: assessment.risk,
-    muleRisk: assessment.muleRisk,
+    detections: assessment.detections,
+    patterns: assessment.patterns,
+    insights: assessment.insights,
+    recommendations: assessment.recommendations,
     alerts: assessment.alerts,
+    fraudFlow: assessment.fraudFlow,
     charts: assessment.charts,
-    telemetry: assessment.telemetry,
   }
 
   if (isMongoReady()) {
