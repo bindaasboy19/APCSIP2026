@@ -6,7 +6,7 @@ async function startServer() {
   await connectDatabase()
 
   app.listen(env.port, () => {
-    console.log(`[server] Listening on http://localhost:${env.port} (${getPersistenceMode()} mode)`)
+    console.log(`[server] Listening on port ${env.port} (${getPersistenceMode()} mode)`)
   })
 }
 
