@@ -8,4 +8,5 @@ export const env = {
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5175',
   jwtSecret: process.env.JWT_SECRET ?? 'demo-jwt-secret-change-me',
   mongoUri: process.env.MONGODB_URI ?? '',
+  host: process.env.HOST ?? '0.0.0.0',
 }

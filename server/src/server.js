@@ -5,8 +5,8 @@ import { env } from './config/env.js'
 async function startServer() {
   await connectDatabase()
 
-  app.listen(env.port, () => {
-    console.log(`[server] Listening on port ${env.port} (${getPersistenceMode()} mode)`)
+  app.listen(env.port, env.host, () => {
+    console.log(`[server] Listening on ${env.host}:${env.port} (${getPersistenceMode()} mode)`)
   })
 }
 
