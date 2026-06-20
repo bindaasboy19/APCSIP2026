@@ -1,4 +1,22 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+function getSanitizedApiUrl(url) {
+  if (!url) return '/api'
+  
+  // If comma-separated (e.g. "/api , https://apcsip2026.onrender.com")
+  if (url.includes(',')) {
+    const parts = url.split(',').map((p) => p.trim()).filter(Boolean)
+    // Find the part that looks like an absolute HTTP(S) URL
+    const absolute = parts.find((p) => /^https?:\/\//i.test(p) || p.startsWith('https:/') || p.startsWith('http:/'))
+    if (absolute) {
+      // Ensure it has double slashes after the protocol (e.g. https://)
+      return absolute.replace(/^(https?):\/+(.*)/i, '$1://$2')
+    }
+    return parts[0]
+  }
+  
+  return url.trim()
+}
+
+const API_BASE_URL = getSanitizedApiUrl(import.meta.env.VITE_API_BASE_URL)
 
 async function request(path, options = {}) {
   const { method = 'GET', token, body, signal } = options
