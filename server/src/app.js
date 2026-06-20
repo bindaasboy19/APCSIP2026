@@ -20,7 +20,13 @@ const allowedOrigins = (env.clientOrigin || '')
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      const isLocalhost = origin && (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'))
+      const isAllowed = !origin || 
+                        allowedOrigins.includes(origin) || 
+                        allowedOrigins.includes('*') ||
+                        (env.nodeEnv !== 'production' && isLocalhost)
+      
+      if (isAllowed) {
         return callback(null, true)
       }
       return callback(new Error(`Origin ${origin} not allowed by CORS`))
