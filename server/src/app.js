@@ -12,21 +12,27 @@ import userRoutes from './routes/userRoutes.js'
 const app = express()
 
 app.use(helmet())
-const allowedOrigins = (env.clientOrigin || '')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean)
+const allowedOrigins = Array.isArray(env.clientOrigin)
+  ? env.clientOrigin
+  : (env.clientOrigin || '')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean)
 
 app.use(
   cors({
     origin: (origin, callback) => {
       const isLocalhost = origin && (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'))
+      const originDomain = origin ? origin.replace(/^https?:\/\//, '') : ''
       const isAllowed = !origin ||
-        allowedOrigins.includes(origin) ||
         allowedOrigins.includes('*') ||
+        allowedOrigins.some(o => o.replace(/^https?:\/\//, '').trim() === originDomain) ||
         (env.nodeEnv !== 'production' && isLocalhost)
 
-      callback(null, isAllowed)
+      if (isAllowed) {
+        return callback(null, true)
+      }
+      return callback(new Error(`Origin ${origin} not allowed by CORS`))
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
